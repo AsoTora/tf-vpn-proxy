@@ -2,10 +2,14 @@ terraform {
   required_providers {
     digitalocean = {
       source = "digitalocean/digitalocean"
+      version = "~> 2.0"
     }
     template = {
       source = "hashicorp/template"
     }
   }
-  required_version = ">= 0.13"
+}
+
+provider "digitalocean" {
+  token = var.do_token
 }

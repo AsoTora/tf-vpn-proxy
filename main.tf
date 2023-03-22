@@ -1,7 +1,3 @@
-provider "digitalocean" {
-  token = var.do_token
-}
-
 locals {
   user_data_vars = {
     proxy_user     = var.proxy_user
@@ -21,17 +17,41 @@ resource "digitalocean_ssh_key" "ssh_key" {
 
 resource "digitalocean_droplet" "vpn_proxy" {
   name      = var.droplet_name
-  image     = "docker-20-04" #Docker 17.12.0~ce on Ubuntu 16.04
+  image     = var.image
   region    = var.region
-  size      = "s-1vcpu-1gb"                     #"memory":1024,"vcpus":1,"disk":25,"transfer":1.0,"price_monthly":5.0
-  ssh_keys  = [digitalocean_ssh_key.ssh_key.id] #id of ssh_key in DO, https://developers.digitalocean.com/documentation/v2/#list-all-keys
-  user_data = templatefile("${path.module}/user-data.sh", local.user_data_vars)
+  size      = "s-1vcpu-512mb-10gb"                     # "memory":1024,"vcpus":1,"disk":25,"transfer":1.0,"price_monthly":5.0
+  ssh_keys  = [digitalocean_ssh_key.ssh_key.fingerprint] # id of ssh_key in DO, https://developers.digitalocean.com/documentation/v2/#list-all-keys
+  # user_data = templatefile("${path.module}/user-data.sh", local.user_data_vars)
+  monitoring = true
 }
 
-output "droplet_ip" {
-  value = digitalocean_droplet.vpn_proxy.ipv4_address
+
+resource "local_file" "script" {
+  content = templatefile("${path.module}/user-data.sh", local.user_data_vars)
+  filename = "${path.module}/user-data-full.sh"
 }
 
-output "Telegram_configuration_link" {
-  value = "t.me/socks?server=${digitalocean_droplet.vpn_proxy.ipv4_address}&port=${var.proxy_port}&user=${var.proxy_user}&pass=${var.proxy_password}"
+resource "null_resource" "remoteExecProvisionerWFolder" {
+  triggers = {
+    always_run = "${timestamp()}"
+  }
+
+  provisioner "file" {
+    source      = "${path.module}/user-data-full.sh"
+    destination = "user-data.sh"
+  }
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x ~/user-data.sh",
+      "bash ~/user-data.sh"
+    ]
+  }
+
+  connection {
+    host     = "${digitalocean_droplet.vpn_proxy.ipv4_address}"
+    type     = "ssh"
+    user     = "root"
+    # private_key = file(var.private_key_path)
+    agent    = true # https://stackoverflow.com/questions/66867538/how-to-use-passphrase-protected-private-ssh-key-in-terraform
+  }
 }

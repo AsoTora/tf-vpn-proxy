@@ -2,7 +2,6 @@ variable "do_token" {
   description = "DigitalOcean access token. https://developers.digitalocean.com/documentation/v2/#authentication"
   default     = ""
 }
-
 variable "droplet_name" {
   description = "Droplet name in DigitalOcean"
   default     = "VPN-Proxy-droplet"
@@ -16,6 +15,14 @@ variable "region" {
 variable "ssh_key_path" {
   description = "Absolute path to ssh key"
   default     = ""
+}
+variable "private_key_path" {
+  description = "Absolute path to ssh key"
+  default     = ""
+}
+
+variable "image" {
+  default = "ubuntu-22.04"
 }
 
 variable "proxy_user" {
